@@ -1,0 +1,190 @@
+# Alertmanager Configuration for Amharic Document Processing System
+
+global:
+  resolve_timeout: 5m
+  # SMTP configuration for email alerts
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@amharic-docs.ai'
+  smtp_auth_username: 'alerts@amharic-docs.ai'
+  smtp_auth_password: '{{ SMTP_PASSWORD }}'
+  smtp_require_tls: true
+
+# Templates for alert notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route configuration
+route:
+  # Default receiver
+  receiver: 'default'
+
+  # Group alerts by these labels
+  group_by: ['alertname', 'cluster', 'service']
+
+  # Wait before sending initial notification
+  group_wait: 30s
+
+  # Wait before sending notification about new alerts in group
+  group_interval: 5m
+
+  # Wait before resending notification
+  repeat_interval: 4h
+
+  # Child routes
+  routes:
+    # Critical alerts - immediate notification
+    - receiver: 'critical-alerts'
+      match:
+        severity: critical
+      group_wait: 10s
+      group_interval: 2m
+      repeat_interval: 1h
+      continue: true
+
+    # Database alerts
+    - receiver: 'database-team'
+      match_re:
+        component: '(database|cache|storage)'
+      group_wait: 1m
+      repeat_interval: 2h
+
+    # Application alerts
+    - receiver: 'backend-team'
+      match_re:
+        component: '(api|processing|celery|ocr)'
+      group_wait: 1m
+      repeat_interval: 2h
+
+    # Infrastructure alerts
+    - receiver: 'infrastructure-team'
+      match_re:
+        component: '(system|network)'
+      group_wait: 2m
+      repeat_interval: 4h
+
+    # SLA violations - escalate to management
+    - receiver: 'management'
+      match:
+        component: sla
+      group_wait: 5m
+      repeat_interval: 30m
+
+# Inhibition rules - suppress certain alerts when others fire
+inhibit_rules:
+  # Inhibit warning if critical alert for same alertname and instance
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+  # Inhibit app alerts if infrastructure is down
+  - source_match_re:
+      alertname: '(APIDown|CeleryWorkerDown)'
+    target_match_re:
+      alertname: '(HighErrorRate|SlowResponseTime)'
+    equal: ['instance']
+
+  # Inhibit database alerts if database is down
+  - source_match_re:
+      alertname: '(PostgreSQLDown|MongoDBDown|RedisDown)'
+    target_match_re:
+      component: 'database|cache'
+    equal: ['instance']
+
+# Receiver configurations
+receivers:
+  # Default receiver
+  - name: 'default'
+    email_configs:
+      - to: 'ops-team@amharic-docs.ai'
+        headers:
+          Subject: '[{{ .GroupLabels.severity | toUpper }}] {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.default.html" . }}'
+        send_resolved: true
+
+  # Critical alerts - multiple channels
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'critical-alerts@amharic-docs.ai'
+        headers:
+          Subject: '🚨 [CRITICAL] {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.critical.html" . }}'
+        send_resolved: true
+
+    slack_configs:
+      - api_url: '{{ SLACK_WEBHOOK_URL }}'
+        channel: '#critical-alerts'
+        title: '🚨 [CRITICAL] {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+    pagerduty_configs:
+      - service_key: '{{ PAGERDUTY_SERVICE_KEY }}'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        severity: '{{ .CommonLabels.severity }}'
+        client: 'Amharic Document System'
+        client_url: 'https://grafana.amharic-docs.ai'
+
+  # Database team
+  - name: 'database-team'
+    email_configs:
+      - to: 'database-team@amharic-docs.ai'
+        headers:
+          Subject: '[{{ .GroupLabels.severity | toUpper }}] Database Alert: {{ .GroupLabels.alertname }}'
+        send_resolved: true
+
+    slack_configs:
+      - api_url: '{{ SLACK_WEBHOOK_URL }}'
+        channel: '#database-alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # Backend team
+  - name: 'backend-team'
+    email_configs:
+      - to: 'backend-team@amharic-docs.ai'
+        headers:
+          Subject: '[{{ .GroupLabels.severity | toUpper }}] Application Alert: {{ .GroupLabels.alertname }}'
+        send_resolved: true
+
+    slack_configs:
+      - api_url: '{{ SLACK_WEBHOOK_URL }}'
+        channel: '#backend-alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # Infrastructure team
+  - name: 'infrastructure-team'
+    email_configs:
+      - to: 'infrastructure-team@amharic-docs.ai'
+        headers:
+          Subject: '[{{ .GroupLabels.severity | toUpper }}] Infrastructure Alert: {{ .GroupLabels.alertname }}'
+        send_resolved: true
+
+    slack_configs:
+      - api_url: '{{ SLACK_WEBHOOK_URL }}'
+        channel: '#infrastructure-alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # Management escalation
+  - name: 'management'
+    email_configs:
+      - to: 'management@amharic-docs.ai'
+        headers:
+          Subject: '⚠️ [SLA VIOLATION] {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.sla.html" . }}'
+        send_resolved: true
+
+    slack_configs:
+      - api_url: '{{ SLACK_WEBHOOK_URL }}'
+        channel: '#management-alerts'
+        title: '⚠️ SLA VIOLATION: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+        color: 'danger'

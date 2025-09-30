@@ -1,0 +1,172 @@
+{
+  "dashboard": {
+    "title": "Amharic Document System - Application Overview",
+    "tags": ["amharic-doc", "overview"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "API Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"}
+        ]
+      },
+      {
+        "title": "API Error Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "{{status}} {{path}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Errors/sec"}
+        ],
+        "alert": {
+          "name": "High Error Rate",
+          "conditions": [
+            {
+              "evaluator": {"params": [0.05], "type": "gt"},
+              "query": {"params": ["A", "5m", "now"]},
+              "type": "query"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Response Time (p95)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Duration"}
+        ]
+      },
+      {
+        "title": "Active Requests",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "http_requests_in_progress",
+            "legendFormat": "{{method}}"
+          }
+        ]
+      },
+      {
+        "title": "Document Processing Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(document_processing_completed_total[5m])",
+            "legendFormat": "Completed"
+          },
+          {
+            "expr": "rate(document_processing_failures_total[5m])",
+            "legendFormat": "Failed"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "label": "Documents/sec"}
+        ]
+      },
+      {
+        "title": "Processing Queue Depth",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "celery_queue_length",
+            "legendFormat": "{{queue}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Queue Depth"}
+        ]
+      },
+      {
+        "title": "OCR Confidence Score",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "avg(ocr_confidence_score)"
+          }
+        ],
+        "options": {
+          "minValue": 0,
+          "maxValue": 1,
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 0.85, "color": "yellow"},
+            {"value": 0.95, "color": "green"}
+          ]
+        }
+      },
+      {
+        "title": "Search Latency (p95)",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 24},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(search_query_duration_seconds_bucket[5m]))"
+          }
+        ],
+        "options": {
+          "unit": "s",
+          "thresholds": [
+            {"value": 0, "color": "green"},
+            {"value": 0.1, "color": "yellow"},
+            {"value": 0.5, "color": "red"}
+          ]
+        }
+      },
+      {
+        "title": "Active Celery Workers",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "count(up{job=\"celery-worker\"} == 1)"
+          }
+        ]
+      },
+      {
+        "title": "API Availability (24h)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 24},
+        "targets": [
+          {
+            "expr": "(sum(rate(http_requests_total{status=~\"2..\"}[24h])) / sum(rate(http_requests_total[24h]))) * 100"
+          }
+        ],
+        "options": {
+          "unit": "percent",
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 99.9, "color": "yellow"},
+            {"value": 99.99, "color": "green"}
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "app": {
+    "title": "Amharic Document Preparation System",
+    "description": "Intelligent processing for Amharic documents"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "upload": "Upload",
+    "processing": "Processing",
+    "search": "Search",
+    "export": "Export",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "upload": {
+      "title": "Upload Documents",
+      "description": "Upload PDF, images, Word documents, CSV files, or web content for processing.",
+      "button": "Upload Files"
+    },
+    "processing": {
+      "title": "Processing Status",
+      "description": "Monitor real-time progress of your document processing jobs.",
+      "button": "View Status"
+    },
+    "search": {
+      "title": "Search Documents",
+      "description": "Search through processed documents with Amharic language support.",
+      "button": "Search"
+    },
+    "recentActivity": "Recent Activity",
+    "noActivity": "No recent activity. Upload your first document to get started."
+  },
+  "upload": {
+    "dragDrop": "Drag and drop files here, or click to select",
+    "supportedFormats": "Supported formats: PDF, JPG, PNG, TIFF, BMP, DOCX, DOC, CSV",
+    "maxFileSize": "Maximum file size: 100MB per file",
+    "uploading": "Uploading...",
+    "success": "Upload successful",
+    "error": "Upload failed"
+  },
+  "processing": {
+    "status": {
+      "queued": "Queued",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "progress": "Progress",
+    "estimatedTime": "Estimated time remaining",
+    "cancel": "Cancel Job",
+    "retry": "Retry"
+  },
+  "search": {
+    "placeholder": "Search documents...",
+    "filters": "Filters",
+    "results": "Search Results",
+    "noResults": "No documents found matching your search.",
+    "suggestions": "Search Suggestions"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "download": "Download",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous"
+  }
+}

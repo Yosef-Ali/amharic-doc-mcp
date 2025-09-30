@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: amharic-doc-system
+data:
+  DATABASE_URL: "postgresql://postgres:postgres_pass@postgres-service:5432/amharic_doc_system"
+  MONGODB_URL: "mongodb://admin:mongo_pass@mongodb-service:27017/amharic_documents?authSource=admin"
+  REDIS_URL: "redis://redis-service:6379/0"
+  MINIO_ENDPOINT: "minio-service:9000"
+  ELASTICSEARCH_URL: "http://elasticsearch-service:9200"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secret
+  namespace: amharic-doc-system
+type: Opaque
+stringData:
+  MINIO_ACCESS_KEY: minioadmin
+  MINIO_SECRET_KEY: minio_pass
+  SECRET_KEY: your-production-secret-key-change-this
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: amharic-doc-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: amharic-doc-backend:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: backend-config
+        - secretRef:
+            name: backend-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: amharic-doc-system
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: ClusterIP

@@ -1,0 +1,126 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+
+  # Python formatting and linting
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        files: ^backend/
+        language_version: python3
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.9
+    hooks:
+      - id: ruff
+        files: ^backend/
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        files: ^backend/
+        additional_dependencies: 
+          - types-requests
+          - types-redis
+          - types-PyYAML
+        args: [--config-file=backend/pyproject.toml]
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        files: ^backend/
+        args: [-c, backend/pyproject.toml]
+
+  - repo: https://github.com/gitguardian/ggshield
+    rev: v1.25.0
+    hooks:
+      - id: ggshield
+        language: python
+        stages: [commit]
+
+  # Frontend formatting and linting
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
+    hooks:
+      - id: eslint
+        files: ^frontend/
+        types: [file]
+        types_or: [javascript, jsx, ts, tsx]
+        args: [--fix]
+        additional_dependencies:
+          - eslint@8.56.0
+          - '@typescript-eslint/eslint-plugin@6.21.0'
+          - '@typescript-eslint/parser@6.21.0'
+          - eslint-plugin-react@7.33.2
+          - eslint-plugin-react-hooks@4.6.0
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^frontend/
+        types_or: [javascript, jsx, ts, tsx, json, yaml, markdown, css]
+
+  # Docker and Infrastructure
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint
+        args: [--ignore, DL3008, --ignore, DL3009]
+
+  - repo: local
+    hooks:
+      # Custom Python tests hook
+      - id: pytest
+        name: Run Python tests
+        entry: bash -c 'cd backend && python -m pytest tests/ -v --tb=short'
+        language: system
+        files: ^backend/
+        types: [python]
+        pass_filenames: false
+        stages: [push]
+
+      # Custom frontend tests hook
+      - id: frontend-test
+        name: Run frontend tests
+        entry: bash -c 'cd frontend && npm test -- --run --reporter=verbose'
+        language: system
+        files: ^frontend/
+        types_or: [javascript, jsx, ts, tsx]
+        pass_filenames: false
+        stages: [push]
+
+      # Custom security scan
+      - id: safety
+        name: Safety check for Python dependencies
+        entry: bash -c 'cd backend && safety check --json'
+        language: system
+        files: ^backend/
+        types: [python]
+        pass_filenames: false
+        stages: [push]
+
+      # Custom vulnerability scan
+      - id: trivy
+        name: Trivy vulnerability scanner
+        entry: trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+        language: system
+        pass_filenames: false
+        stages: [push]

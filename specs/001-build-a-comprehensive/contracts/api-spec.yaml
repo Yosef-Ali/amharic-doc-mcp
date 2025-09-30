@@ -1,0 +1,1137 @@
+openapi: 3.0.3
+info:
+  title: Amharic Document Preparation System API
+  description: |
+    Comprehensive API for processing, analyzing, and managing Amharic documents with multi-agent orchestration.
+    
+    ## Features
+    - Multi-format document upload (PDF, images, Word, CSV, web content)
+    - Real-time processing with CrewAI agents
+    - Amharic-specific text analysis and OCR
+    - Advanced search and export capabilities
+    - Quality assurance and validation metrics
+    
+  version: 1.0.0
+  contact:
+    name: Amharic Document System Team
+    email: support@amharic-docs.ai
+    
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: https://api.amharic-docs.ai/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Documents
+    description: Document upload, management, and retrieval
+  - name: Processing
+    description: Document processing jobs and task management
+  - name: Search
+    description: Document search and discovery
+  - name: Export
+    description: Document export and template management
+  - name: Quality
+    description: Quality metrics and validation
+  - name: MCP
+    description: Model Context Protocol integration endpoints
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: Authenticate user and return JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh JWT token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+
+  # Document Management Endpoints
+  /documents/upload:
+    post:
+      tags: [Documents]
+      summary: Upload documents for processing
+      description: |
+        Upload single or multiple documents up to 100MB each.
+        Supports PDF, images (JPG, PNG, TIFF, BMP), Word documents, CSV, and web content.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Document files to upload (max 100MB each)
+                job_name:
+                  type: string
+                  description: Optional name for the processing job
+                configuration:
+                  $ref: '#/components/schemas/JobConfiguration'
+              required:
+                - files
+      responses:
+        '201':
+          description: Documents uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Invalid request or file validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File size exceeds limit
+        '415':
+          description: Unsupported file type
+
+  /documents/{document_id}:
+    get:
+      tags: [Documents]
+      summary: Get document details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '404':
+          description: Document not found
+
+    delete:
+      tags: [Documents]
+      summary: Delete document
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Document deleted successfully
+        '404':
+          description: Document not found
+
+  /documents:
+    get:
+      tags: [Documents]
+      summary: List user documents
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentStatus'
+        - name: document_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentType'
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, filename, file_size, processed_at]
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Documents retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentList'
+
+  # Processing Endpoints
+  /processing/jobs:
+    get:
+      tags: [Processing]
+      summary: List processing jobs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/JobStatus'
+      responses:
+        '200':
+          description: Processing jobs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobList'
+
+  /processing/jobs/{job_id}:
+    get:
+      tags: [Processing]
+      summary: Get processing job details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingJob'
+        '404':
+          description: Job not found
+
+  /processing/jobs/{job_id}/cancel:
+    post:
+      tags: [Processing]
+      summary: Cancel processing job
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job cancelled successfully
+        '400':
+          description: Job cannot be cancelled in current state
+        '404':
+          description: Job not found
+
+  /processing/jobs/{job_id}/tasks:
+    get:
+      tags: [Processing]
+      summary: Get job task details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task details retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProcessingTask'
+
+  /processing/status:
+    get:
+      tags: [Processing]
+      summary: Get system processing status
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: System status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+
+  # Search Endpoints
+  /search/documents:
+    post:
+      tags: [Search]
+      summary: Search documents
+      description: |
+        Full-text search across processed documents with Amharic language support.
+        Supports both keyword and semantic search with faceted filtering.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+
+  /search/suggestions:
+    get:
+      tags: [Search]
+      summary: Get search suggestions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+      responses:
+        '200':
+          description: Search suggestions retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  # Export Endpoints
+  /export/documents/{document_id}:
+    post:
+      tags: [Export]
+      summary: Export document
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: Document exported successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Document not found
+
+  /export/templates:
+    get:
+      tags: [Export]
+      summary: List export templates
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Export templates retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExportTemplate'
+
+  # Quality Metrics Endpoints
+  /quality/metrics/{document_id}:
+    get:
+      tags: [Quality]
+      summary: Get document quality metrics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quality metrics retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QualityMetric'
+
+  /quality/summary:
+    get:
+      tags: [Quality]
+      summary: Get quality metrics summary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Quality summary retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualitySummary'
+
+  # MCP Integration Endpoints
+  /mcp/tools:
+    get:
+      tags: [MCP]
+      summary: List available MCP tools
+      description: Get list of tools available for CopilotKit integration
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: MCP tools retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MCPTool'
+
+  /mcp/tools/{tool_name}/execute:
+    post:
+      tags: [MCP]
+      summary: Execute MCP tool
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tool_name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MCPExecuteRequest'
+      responses:
+        '200':
+          description: Tool executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPExecuteResponse'
+
+  # WebSocket endpoint for real-time updates
+  /ws/processing/{job_id}:
+    get:
+      tags: [Processing]
+      summary: WebSocket connection for real-time job updates
+      description: |
+        WebSocket endpoint providing real-time updates for processing jobs.
+        Sends progress updates, status changes, and completion notifications.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            description: JWT token for authentication
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Authentication Schemas
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+        expires_in:
+          type: integer
+        user:
+          $ref: '#/components/schemas/User'
+
+    # User Schema
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        created_at:
+          type: string
+          format: date-time
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    UserRole:
+      type: string
+      enum: [admin, processor, viewer]
+
+    UserPreferences:
+      type: object
+      properties:
+        language:
+          type: string
+          default: en
+        default_export_format:
+          type: string
+          default: pdf
+        notifications_enabled:
+          type: boolean
+          default: true
+
+    # Document Schemas
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        owner_id:
+          type: string
+          format: uuid
+        job_id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        document_type:
+          $ref: '#/components/schemas/DocumentType'
+        file_size:
+          type: integer
+        content_hash:
+          type: string
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        metadata:
+          $ref: '#/components/schemas/DocumentMetadata'
+        created_at:
+          type: string
+          format: date-time
+        processed_at:
+          type: string
+          format: date-time
+
+    DocumentType:
+      type: string
+      enum: [pdf, image, word, csv, web_content]
+
+    DocumentStatus:
+      type: string
+      enum: [uploaded, queued, processing, completed, failed, archived]
+
+    DocumentMetadata:
+      type: object
+      properties:
+        original_name:
+          type: string
+        mime_type:
+          type: string
+        page_count:
+          type: integer
+        language_detected:
+          type: string
+        creation_date:
+          type: string
+          format: date-time
+        author:
+          type: string
+
+    DocumentList:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Processing Schemas
+    ProcessingJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        job_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        total_documents:
+          type: integer
+        completed_documents:
+          type: integer
+        progress_percentage:
+          type: number
+          format: float
+        configuration:
+          $ref: '#/components/schemas/JobConfiguration'
+        created_at:
+          type: string
+          format: date-time
+        estimated_completion:
+          type: string
+          format: date-time
+
+    JobStatus:
+      type: string
+      enum: [created, running, completed, failed, cancelled, paused]
+
+    JobConfiguration:
+      type: object
+      properties:
+        ocr_languages:
+          type: array
+          items:
+            type: string
+          default: ["amh", "eng"]
+        quality_threshold:
+          type: number
+          format: float
+          default: 0.85
+        enable_spell_check:
+          type: boolean
+          default: true
+        enable_ner:
+          type: boolean
+          default: true
+        output_formats:
+          type: array
+          items:
+            type: string
+          default: ["pdf", "docx"]
+        batch_size:
+          type: integer
+          default: 10
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+          default: 1
+
+    ProcessingTask:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        job_id:
+          type: string
+          format: uuid
+        document_id:
+          type: string
+          format: uuid
+        agent_type:
+          $ref: '#/components/schemas/AgentType'
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        confidence_score:
+          type: number
+          format: float
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        retry_count:
+          type: integer
+
+    AgentType:
+      type: string
+      enum: [
+        orchestrator,
+        document_analyzer,
+        pdf_extractor,
+        image_ocr,
+        word_extractor,
+        csv_processor,
+        web_scraper,
+        amharic_nlp,
+        quality_assurance
+      ]
+
+    TaskStatus:
+      type: string
+      enum: [pending, running, completed, failed, retrying, cancelled]
+
+    JobList:
+      type: object
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessingJob'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    SystemStatus:
+      type: object
+      properties:
+        active_jobs:
+          type: integer
+        queued_documents:
+          type: integer
+        processing_agents:
+          type: array
+          items:
+            type: object
+            properties:
+              agent_type:
+                $ref: '#/components/schemas/AgentType'
+              status:
+                type: string
+                enum: [available, busy, offline]
+              current_task_id:
+                type: string
+                format: uuid
+        system_load:
+          type: number
+          format: float
+
+    # Search Schemas
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Search query string
+        filters:
+          $ref: '#/components/schemas/SearchFilters'
+        sort:
+          $ref: '#/components/schemas/SearchSort'
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+
+    SearchFilters:
+      type: object
+      properties:
+        document_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentType'
+        languages:
+          type: array
+          items:
+            type: string
+        date_range:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        quality_score:
+          type: object
+          properties:
+            min:
+              type: number
+              format: float
+            max:
+              type: number
+              format: float
+
+    SearchSort:
+      type: object
+      properties:
+        field:
+          type: string
+          enum: [relevance, date, title, quality_score]
+          default: relevance
+        order:
+          type: string
+          enum: [asc, desc]
+          default: desc
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        facets:
+          $ref: '#/components/schemas/SearchFacets'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+        total_matches:
+          type: integer
+        query_time:
+          type: number
+          format: float
+
+    SearchResult:
+      type: object
+      properties:
+        document:
+          $ref: '#/components/schemas/Document'
+        relevance_score:
+          type: number
+          format: float
+        highlights:
+          type: array
+          items:
+            type: string
+        snippet:
+          type: string
+
+    SearchFacets:
+      type: object
+      properties:
+        document_types:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              count:
+                type: integer
+        languages:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              count:
+                type: integer
+
+    # Export Schemas
+    ExportRequest:
+      type: object
+      required:
+        - format
+      properties:
+        format:
+          type: string
+          enum: [pdf, docx, html, markdown, json]
+        template_id:
+          type: string
+          format: uuid
+        include_metadata:
+          type: boolean
+          default: true
+        include_quality_metrics:
+          type: boolean
+          default: false
+
+    ExportTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        output_format:
+          type: string
+          enum: [pdf, docx, html, markdown, json]
+        is_default:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    # Quality Schemas
+    QualityMetric:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        document_id:
+          type: string
+          format: uuid
+        metric_type:
+          type: string
+          enum: [
+            ocr_accuracy,
+            language_detection,
+            structure_extraction,
+            ner_confidence,
+            processing_time,
+            content_completeness
+          ]
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        details:
+          type: object
+        measured_at:
+          type: string
+          format: date-time
+
+    QualitySummary:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        metrics:
+          type: array
+          items:
+            type: object
+            properties:
+              metric_type:
+                type: string
+              average_score:
+                type: number
+                format: float
+              total_measurements:
+                type: integer
+              trend:
+                type: string
+                enum: [improving, stable, declining]
+
+    # MCP Integration Schemas
+    MCPTool:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parameters:
+          type: object
+        returns:
+          type: object
+
+    MCPExecuteRequest:
+      type: object
+      properties:
+        parameters:
+          type: object
+        context:
+          type: object
+
+    MCPExecuteResponse:
+      type: object
+      properties:
+        result:
+          type: object
+        status:
+          type: string
+          enum: [success, error]
+        message:
+          type: string
+
+    # Upload Response
+    UploadResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        documents:
+          type: array
+          items:
+            type: object
+            properties:
+              document_id:
+                type: string
+                format: uuid
+              filename:
+                type: string
+              status:
+                type: string
+        message:
+          type: string
+
+    # Common Schemas
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total_pages:
+          type: integer
+        total_items:
+          type: integer
+        has_next:
+          type: boolean
+        has_previous:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+          format: uuid

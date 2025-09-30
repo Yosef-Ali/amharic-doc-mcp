@@ -1,0 +1,1 @@
+"""Configuration management for the Amharic document system."""

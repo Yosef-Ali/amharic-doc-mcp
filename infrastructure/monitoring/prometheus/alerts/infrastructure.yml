@@ -1,0 +1,200 @@
+# Infrastructure-Level Alerts
+
+groups:
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      # Database Alerts
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 2 minutes"
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL connection count is high"
+          description: "{{ $value | humanizePercentage }} of max connections in use"
+
+      - alert: PostgreSQLSlowQueries
+        expr: rate(pg_stat_statements_mean_exec_time[5m]) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL queries are slow"
+          description: "Average query time is {{ $value }}ms"
+
+      - alert: MongoDBDown
+        expr: up{job="mongodb"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "MongoDB is down"
+          description: "MongoDB has been down for more than 2 minutes"
+
+      - alert: MongoDBReplicationLag
+        expr: mongodb_replset_member_replication_lag > 60
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "MongoDB replication lag detected"
+          description: "Replication lag is {{ $value }}s"
+
+      # Redis Alerts
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 2 minutes"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis is using {{ $value | humanizePercentage }} of available memory"
+
+      - alert: RedisHighEvictionRate
+        expr: rate(redis_evicted_keys_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "High Redis key eviction rate"
+          description: "{{ $value }} keys/second are being evicted"
+
+      # MinIO Storage Alerts
+      - alert: MinIODown
+        expr: up{job="minio"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: storage
+        annotations:
+          summary: "MinIO is down"
+          description: "MinIO object storage has been down for more than 2 minutes"
+
+      - alert: MinIOStorageUsageHigh
+        expr: (minio_cluster_usage_total_bytes / minio_cluster_capacity_total_bytes) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "MinIO storage usage is high"
+          description: "{{ $value | humanizePercentage }} of storage capacity used"
+
+      - alert: MinIOHighErrorRate
+        expr: rate(minio_s3_requests_errors_total[5m]) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "MinIO error rate is high"
+          description: "{{ $value | humanizePercentage }} of S3 requests are failing"
+
+      # Elasticsearch Alerts
+      - alert: ElasticsearchDown
+        expr: up{job="elasticsearch"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: search
+        annotations:
+          summary: "Elasticsearch is down"
+          description: "Elasticsearch has been down for more than 2 minutes"
+
+      - alert: ElasticsearchClusterYellow
+        expr: elasticsearch_cluster_health_status{color="yellow"} == 1
+        for: 15m
+        labels:
+          severity: warning
+          component: search
+        annotations:
+          summary: "Elasticsearch cluster status is yellow"
+          description: "Cluster has unassigned replica shards"
+
+      - alert: ElasticsearchClusterRed
+        expr: elasticsearch_cluster_health_status{color="red"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          component: search
+        annotations:
+          summary: "Elasticsearch cluster status is red"
+          description: "Cluster has unassigned primary shards - DATA LOSS RISK"
+
+      - alert: ElasticsearchHeapUsageHigh
+        expr: elasticsearch_jvm_memory_used_bytes{area="heap"} / elasticsearch_jvm_memory_max_bytes{area="heap"} > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: search
+        annotations:
+          summary: "Elasticsearch heap usage is high"
+          description: "JVM heap usage is {{ $value | humanizePercentage }}"
+
+      # System Resource Alerts
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: NodeOutOfMemory
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Node is running out of memory"
+          description: "Only {{ $value | humanizePercentage }} memory available on {{ $labels.instance }}"
+
+      - alert: DiskIOHigh
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High disk I/O detected"
+          description: "Disk I/O utilization is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      - alert: NetworkErrorsHigh
+        expr: rate(node_network_receive_errs_total[5m]) + rate(node_network_transmit_errs_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: network
+        annotations:
+          summary: "High network error rate"
+          description: "{{ $value }} network errors/second on {{ $labels.instance }}"

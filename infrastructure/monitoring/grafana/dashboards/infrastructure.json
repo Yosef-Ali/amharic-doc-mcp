@@ -1,0 +1,233 @@
+{
+  "dashboard": {
+    "title": "Amharic Document System - Infrastructure",
+    "tags": ["amharic-doc", "infrastructure"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "1m",
+    "panels": [
+      {
+        "title": "Service Health Status",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=~\"backend-api|celery-worker|postgres|mongodb|redis|minio|elasticsearch\"}",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          },
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 1, "color": "green"}
+          ]
+        }
+      },
+      {
+        "title": "PostgreSQL Connections",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends",
+            "legendFormat": "{{datname}}"
+          },
+          {
+            "expr": "pg_settings_max_connections",
+            "legendFormat": "Max Connections"
+          }
+        ]
+      },
+      {
+        "title": "MongoDB Operations/sec",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "targets": [
+          {
+            "expr": "rate(mongodb_op_counters_total[5m])",
+            "legendFormat": "{{type}}"
+          }
+        ]
+      },
+      {
+        "title": "Redis Memory Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes",
+            "legendFormat": "Used"
+          },
+          {
+            "expr": "redis_memory_max_bytes",
+            "legendFormat": "Max"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes"}
+        ]
+      },
+      {
+        "title": "Redis Hit Rate",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+        "targets": [
+          {
+            "expr": "rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))"
+          }
+        ],
+        "options": {
+          "minValue": 0,
+          "maxValue": 1,
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 0.8, "color": "yellow"},
+            {"value": 0.95, "color": "green"}
+          ]
+        }
+      },
+      {
+        "title": "MinIO Storage Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+        "targets": [
+          {
+            "expr": "minio_cluster_usage_total_bytes",
+            "legendFormat": "Used"
+          },
+          {
+            "expr": "minio_cluster_capacity_total_bytes",
+            "legendFormat": "Capacity"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes"}
+        ]
+      },
+      {
+        "title": "MinIO Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
+        "targets": [
+          {
+            "expr": "rate(minio_s3_requests_total[5m])",
+            "legendFormat": "{{api}}"
+          }
+        ]
+      },
+      {
+        "title": "Elasticsearch Cluster Health",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 0, "y": 30},
+        "targets": [
+          {
+            "expr": "elasticsearch_cluster_health_status"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "thresholds": [
+            {"value": 0, "color": "green"},
+            {"value": 1, "color": "yellow"},
+            {"value": 2, "color": "red"}
+          ]
+        }
+      },
+      {
+        "title": "Elasticsearch Index Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 30},
+        "targets": [
+          {
+            "expr": "rate(elasticsearch_indices_indexing_index_total[5m])",
+            "legendFormat": "{{index}}"
+          }
+        ]
+      },
+      {
+        "title": "Elasticsearch Query Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 30},
+        "targets": [
+          {
+            "expr": "rate(elasticsearch_indices_search_query_total[5m])",
+            "legendFormat": "{{index}}"
+          }
+        ]
+      },
+      {
+        "title": "CPU Usage by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 38},
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total[5m]) * 100",
+            "legendFormat": "{{container}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent"}
+        ]
+      },
+      {
+        "title": "Memory Usage by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 38},
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes",
+            "legendFormat": "{{container}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes"}
+        ]
+      },
+      {
+        "title": "Network I/O",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 46},
+        "targets": [
+          {
+            "expr": "rate(node_network_receive_bytes_total[5m])",
+            "legendFormat": "RX {{device}}"
+          },
+          {
+            "expr": "rate(node_network_transmit_bytes_total[5m])",
+            "legendFormat": "TX {{device}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "Bps"}
+        ]
+      },
+      {
+        "title": "Disk I/O",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 46},
+        "targets": [
+          {
+            "expr": "rate(node_disk_read_bytes_total[5m])",
+            "legendFormat": "Read {{device}}"
+          },
+          {
+            "expr": "rate(node_disk_written_bytes_total[5m])",
+            "legendFormat": "Write {{device}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "Bps"}
+        ]
+      }
+    ]
+  }
+}

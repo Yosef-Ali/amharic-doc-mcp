@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: amharic-doc-system
+  labels:
+    name: amharic-doc-system
+    app: amharic-document-preparation-system

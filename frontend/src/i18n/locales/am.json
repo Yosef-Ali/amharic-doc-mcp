@@ -1,0 +1,77 @@
+{
+  "app": {
+    "title": "የአማርኛ ሰነድ ዝግጅት ስርዓት",
+    "description": "ለአማርኛ ሰነዶች ዘመናዊ ሂደት"
+  },
+  "navigation": {
+    "dashboard": "ዳሽቦርድ",
+    "upload": "ሰነድ ወረድ",
+    "processing": "ሂደት",
+    "search": "ፈላጊ",
+    "export": "ላክ",
+    "settings": "ቅንብሮች"
+  },
+  "dashboard": {
+    "title": "ዳሽቦርድ",
+    "upload": {
+      "title": "ሰነዶችን ወረድ",
+      "description": "PDF፣ ምስሎች፣ Word ሰነዶች፣ CSV ፋይሎች፣ ወይም የድር ይዘት ለሂደት ወረድ።",
+      "button": "ፋይሎች ወረድ"
+    },
+    "processing": {
+      "title": "የሂደት ሁኔታ",
+      "description": "የሰነድ ሂደት ስራዎችዎን በቅጽበት ይከታተሉ።",
+      "button": "ሁኔታ ይመልከቱ"
+    },
+    "search": {
+      "title": "ሰነዶችን ፈልግ",
+      "description": "በአማርኛ ቋንቋ ድጋፍ በተሰነዱ ሰነዶች ውስጥ ይፈልጉ።",
+      "button": "ፈልግ"
+    },
+    "recentActivity": "የቅርብ ጊዜ እንቅስቃሴ",
+    "noActivity": "የቅርብ ጊዜ እንቅስቃሴ የለም። ለመጀመር የመጀመሪያ ሰነድዎን ወረድ።"
+  },
+  "upload": {
+    "dragDrop": "ፋይሎችን እዚህ ጎትተው ይጣሉ፣ ወይም ለመምረጥ ይጫኑ",
+    "supportedFormats": "የሚደገፉ ቅርጾች፦ PDF፣ JPG፣ PNG፣ TIFF፣ BMP፣ DOCX፣ DOC፣ CSV",
+    "maxFileSize": "ከፍተኛ የፋይል መጠን፦ ለአንድ ፋይል 100MB",
+    "uploading": "በመወረድ ላይ...",
+    "success": "ወርዶ ተሳክቷል",
+    "error": "ወርዶ ተሳክቷል"
+  },
+  "processing": {
+    "status": {
+      "queued": "በመስመር ላይ",
+      "processing": "በሂደት ላይ",
+      "completed": "ተጠናቅቋል",
+      "failed": "ተሳክቷል",
+      "cancelled": "ተሰርዞኣል"
+    },
+    "progress": "እድገት",
+    "estimatedTime": "የሚቀረው ግምታዊ ጊዜ",
+    "cancel": "ስራ ሰርዝ",
+    "retry": "እንደገና ሞክር"
+  },
+  "search": {
+    "placeholder": "ሰነዶችን ፈልግ...",
+    "filters": "ማጣሪያዖች",
+    "results": "የፍለጋ ውጤቶች",
+    "noResults": "ከፍለጋዎ ጋር የሚዛመድ ሰነድ አልተገኘም።",
+    "suggestions": "የፍለጋ ሀሳቦች"
+  },
+  "common": {
+    "loading": "በመጫን ላይ...",
+    "error": "ስህተት",
+    "success": "ተሳክቷል",
+    "cancel": "ሰርዝ",
+    "save": "አስቀምጥ",
+    "delete": "ሰርዝ",
+    "edit": "አርም",
+    "view": "ይመልከቱ",
+    "download": "አውርድ",
+    "close": "ዝጋ",
+    "back": "ተመለስ",
+    "next": "ቀጣይ",
+    "previous": "ቀዳሚ"
+  }
+}
